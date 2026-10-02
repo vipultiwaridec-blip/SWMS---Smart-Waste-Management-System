@@ -1,195 +1,97 @@
-# SWMS — Smart Waste Management System
+# SWMS app (Next.js)
 
-**Most waste apps stop at "complaint submitted." SWMS closes the loop.** Every report is pinned to a place, assigned to a worker, and closed only with photo proof and the resident's confirmation. The history of each place shows admins where problems keep coming back, so they can prevent them instead of only reacting.
+The web application for the Smart Waste Management System. Project overview, features and documentation: see the [main README](../README.md) and [DOCUMENTATION/](../DOCUMENTATION/).
 
-> **Status:** in development. Design, documentation and database schema are complete; the app's home page is built; the other screens and the backend are being built now. All organisations, people, places and cases in the app are **sample data**.
+## Run locally
 
----
-
-## Try the live demo
-
-**Website:** **https://swms-smart-waste.vercel.app**
-
-Two sample organisations are set up with staff accounts so you can see how the app works from each side. Everything in them is **sample data** and may be reset at any time.
-
-### Staff demo accounts
-
-**Password for every account below:** `ujjwal@123@`
-
-| Organisation | Role | Login email | Staff ID |
-|---|---|---|---|
-| City Ward A | Administrator | `admin@citywarda.demo` | `CWA-ADM-001` |
-| City Ward A | Worker — driver | `worker1@citywarda.demo` | `CWA-DRV-001` |
-| City Ward A | Worker — waste collector | `worker2@citywarda.demo` | `CWA-COL-001` |
-| Green Residency Society | Administrator | `admin@greenresidency.demo` | `GRS-ADM-001` |
-| Green Residency Society | Worker — driver | `worker1@greenresidency.demo` | `GRS-DRV-001` |
-| Green Residency Society | Worker — waste collector | `worker2@greenresidency.demo` | `GRS-COL-001` |
-
-### How to log in
-
-1. Open the website and choose **Log in**, then pick **who you are**.
-2. **Administrator** — enter the **Staff ID**, **login email** and **password**. You land on the admin dashboard (cases, map, duty roster, vehicle trips, analytics, setup).
-3. **Worker** — choose the **organisation** and the **block / area you are working in today**, then enter the **Staff ID**, **login email** and **password**. You land on today's work (duties, tasks, live vehicles; drivers can start a trip).
-
-### Residents — use your own email
-
-There is **no shared resident account**. To try the resident side, choose **Sign up → Resident**, register with **your own real email address (for example your Gmail)**, pick an organisation and home area, then report an issue or request a pickup and follow it to the end.
-
-> Please do not enter real addresses, phone numbers or photos of people — this is a demo.
-
----
-
-## 1. The problem
-
-Cities, colleges, residential societies and public places produce a lot of waste every day, and collection is managed by hand. This leads to:
-
-- overflowing bins
-- missed or late pickups
-- poor segregation (wet, dry and hazardous waste mixed)
-- no easy way to report a problem, and no way to see whether it was fixed
-
-Admins have no central data, so they cannot spot hotspots, monitor complaints or improve the service.
-
-**The core issue is a broken feedback loop.** After a report, nothing visible happens: nobody is clearly responsible, there is no proof of the fix, nothing escalates when it is late, and the same spot keeps overflowing without anyone noticing the pattern. When people never see results, they stop reporting. *(This is our working explanation, not a measured finding.)*
-
----
-
-## 2. Our solution — close the whole loop
-
-```mermaid
-flowchart LR
-  A["📸 Resident reports<br/>photo + GPS pin"] --> B["👤 Admin assigns<br/>a worker + deadline"]
-  B --> C["🧹 Worker fixes it<br/>and adds an after-photo"]
-  C --> D{"🙋 Resident<br/>confirms?"}
-  D -- "Fixed" --> E["✅ Case closed"]
-  D -- "Not fixed" --> B
-  E --> F["📍 Place history<br/>hotspots + risk"]
-  F --> G["🛡️ Admin prevents<br/>the next problem"]
-```
-
-If a case passes its deadline, it is flagged and escalated automatically: **admin → supervisor → higher authority**.
-
----
-
-## 3. What makes it different
-
-| Typical complaint app | SWMS |
-|---|---|
-| Stops at "complaint submitted" | Follows the case to the fix, the proof and the resident's confirmation |
-| Admin marks "resolved" with one click | Cannot close without the worker's after-photo |
-| Nothing happens when it is late | Automatic overdue flag and two-level escalation |
-| Shows single tickets | **Place-level history**: hotspots and a next-day risk score for each location |
-| No role for the worker | Worker / driver view with tasks and trips |
-| AI decides the category | AI only **suggests**; a person always decides |
-| Photos are public | Private photos, time-limited links, hidden GPS data removed from images |
-
-*We compared a set of existing apps; we do not claim worldwide uniqueness.*
-
----
-
-## 4. Features
-
-**Six core features**
-
-| # | Feature | What it does |
-|---|---|---|
-| 1 | Registration & login | Email + password; each role lands on its own home screen |
-| 2 | Report waste issues | Photo, GPS pin (draggable), waste category; AI suggests the category |
-| 3 | Waste pickup request | Choose a date and time slot; scheduled → collected / missed / refused |
-| 4 | Complaint tracking | Timeline, before/after photos, feedback, reopen within a short window |
-| 5 | Admin dashboard | Counts, map, hotspots, overdue cases, worker performance |
-| 6 | Waste awareness | Segregation guide in English and Hindi, with a source for every item |
-
-**Extra features**
-
-- Deadlines and automatic escalation for every case
-- Missed pickup automatically creates a linked complaint
-- QR codes on bins and locations for quick reporting
-- Simulated vehicle trips, arrival estimate and a check that waste reached the approved dumping site
-- Hotspot risk score (labelled as a prediction from sample data)
-- Points and badges for verified reports (no cash)
-- One system for many organisations — a city ward and a residential society in the demo — with each organisation's data kept separate
-
-**Roles:** Resident · Worker / Driver · Admin · Supervisor · Higher authority
-
----
-
-## 5. How it works (architecture)
-
-```mermaid
-flowchart LR
-  U["📱 Phone / 💻 Browser"] --> APP["Next.js app<br/>screens + server code"]
-  APP --> AUTH["Supabase Auth<br/>login"]
-  APP --> DB[("Supabase Postgres<br/>data + access rules")]
-  APP --> ST[("Supabase Storage<br/>private photos")]
-  APP --> AI["Gemini AI<br/>category suggestion"]
-  JOBS["Scheduled jobs<br/>overdue · escalation · risk"] --> DB
-  U --> MAP["OpenStreetMap<br/>map tiles"]
-```
-
-- The **database decides who can see what** (Row Level Security): a user only ever receives the rows their role and organisation allow.
-- **Every case change goes through one database function** that checks the role, the organisation and the allowed status change, and writes the timeline and notifications in the same step.
-- **Scheduled jobs** run inside the database every 15 minutes (overdue, escalation, missed pickups) and daily (hotspot risk, performance).
-
----
-
-## 6. Tech stack
-
-| Tool | Used for | Why |
-|---|---|---|
-| **Next.js + TypeScript** | Screens and server code in one project | One codebase, fast to build |
-| **Tailwind CSS + shadcn/ui** | User interface | Clean, accessible components |
-| **Supabase Postgres** | Database (22 tables) | Relational data fits place → cases → events |
-| **Row Level Security** | Access control | Enforced by the database itself |
-| **Supabase Auth** | Login, sessions, password reset | Built in |
-| **Supabase Storage** | Private photos with time-limited links | Photos of homes and streets stay private |
-| **pg_cron** | 7 scheduled jobs | Runs inside the database |
-| **Gemini API** | Waste category suggestion | Behind a small adapter, so it can be replaced |
-| **Leaflet + OpenStreetMap** | Maps | Free, no key needed |
-| **Vercel** | Hosting with HTTPS | Phone camera and GPS need HTTPS |
-
----
-
-## 7. Run it locally
-
-Requirements: **Node.js 20.9 or newer** (24 LTS recommended).
+Requirements: Node.js 22 or newer (`nvm use` reads `.nvmrc`); Supabase needs 22+.
 
 ```bash
-cd swms-app
 npm install
 npm run dev
 ```
 
-Open **http://localhost:3000**. Only the home page exists so far; it needs no keys.
+Open http://localhost:3000.
 
+## What is built
 
+- **Awareness page** (`/awareness`): four-stream segregation guide (Solid Waste Management Rules, 2026) and e-waste, English / हिन्दी, official source per item.
+- **Home page** (`/`, file `app/(public)/page.tsx`): headline, animated park scene with a tappable bin mascot, a sample case tracker, how the loop works, issue types and the six features.
+- Folders for every other screen, the API routes, the database migrations and the tests are in place; they are filled in as each part is built.
 
-## 8. Repository map
+### Current implementation checkpoint (2026-10-01)
+
+The earlier folder map and build notes above describe the initial scaffold. The app now has live Supabase login/sign-up, report and case flows, role dashboards, `/pickup/new` and `/pickup/[id]`, and account recovery screens. The pickup form, staff actions, private photo evidence, status timeline, notifications, and automatic missed-pickup complaint are connected to the configured Supabase project. The login/sign-up frame shows `public/images/auth/clean-city-scene.webp` and the requested clean-city headline. The AI analyzer, trip screens, admin setup/map and several Should/Could pages from the PRD are still pending; do not treat the folder map as a completed route list. `NEXT_PUBLIC_SITE_URL` is optional for local reset links and required for a deployed URL; allow the callback URL in Supabase Auth settings. Existing hosted access checks and 16 offline schema tests pass.
+
+🆕 The required AI photo-suggestion UI and server adapter were added after that checkpoint. They use `gemini-3.5-flash-lite` only when `GEMINI_API_KEY` is set; otherwise both screens keep manual guidance. The AI quota migration was applied to the configured Supabase project. The latest local suite passes 20 tests across schema and JPEG units. Live AI classification is still unverified because the key is empty.
+
+## Stack in this folder
+
+Next.js (App Router) · TypeScript · Tailwind CSS · shadcn/ui · lucide-react icons · fonts Plus Jakarta Sans and Instrument Serif (`next/font`).
+
+## Folder map
 
 ```
-├── README.md                      ← you are here
-├── DOCUMENTATION/
-│   ├── 02-PRD.md                  features, acceptance checks, requirements
-│   ├── 03-FULL-APP-FLOW.md        every screen and flow, diagrams, permissions, data model
-│   ├── 04-TECH-STACK.md           tools, decisions, security, risks
-│   ├── 05-AI-SPEC.md              AI and automation features and their limits
-│   ├── 06-PHYSICAL-SCHEMA.md      full database SQL and test results
-│   └── TECH-STACK/                the stack split into 8 parts (frontend … devops)
-└── swms-app/                      the Next.js application
+app/(public)/        home, login, sign-up, password reset, awareness
+app/(public)/(auth)/ login + sign-up share one layout (frame stays while switching tabs)
+app/(resident)/      report, case, pickup screens
+app/(worker)/        worker tasks and trips
+app/(admin)/         dashboard, map, setup, trips, flags, audit
+app/(supervisor)/    supervisor queue
+app/(authority)/     higher-authority queue
+app/api/             photo upload, AI category suggestion, CSV export
+components/layout/   site header, footer, navigation links
+components/shared/   small reusable pieces (logo, scroll reveal, demo label)
+components/ui/       shadcn/ui components
+features/home/       home page: sections, widgets, scene, content (entry: index.ts)
+features/awareness/  awareness page: guide section, language toggle (text + sources in content/awareness.json)
+features/auth/       login + sign-up: frame, forms, island scene; schema.ts + actions.ts (demo, TODO(backend))
+                     current frame uses the generated city scene in public/images/auth/
+lib/                 Supabase clients, validation, AI adapter
+supabase/            database migrations (from 06-PHYSICAL-SCHEMA), seed.sql, config.toml
+scripts/             seed-users (sample logins), check-db (live security check), supabase-db (push, types)
+tests/schema/        offline database test (PGlite): npm run test:schema
+public/images/       illustrations (credits in public/images/issues/CREDITS.md)
 ```
 
-**Where to start reading:** this README → 03-FULL-APP-FLOW §4.0 (the full workflow diagram) → 02-PRD.
+## Keys
 
----
+The home page needs no keys. When the backend is added, create `.env.local` (never committed):
 
-## 9. Honest limits
+```
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=      # server only
+GEMINI_API_KEY=                 # server only
+```
 
-- Runs on **sample data**; it has not been tested with a real municipality or society.
-- The risk score and performance flags are simple statistics on sample data, not validated predictions.
-- Photos support a review; they do not prove that a problem was solved.
-- Phone GPS can be faked; distance checks raise warnings, not proof.
-- Deadlines and limits shown are demo settings, not official service standards.
+All organisations, people, places and cases shown in the app are sample data.
 
----
+© 2026 SWMS team. All rights reserved. See [LICENSE](../LICENSE).
 
-© 2026 SWMS team. All rights reserved. Shared for review only; no reuse without written permission. See [LICENSE](LICENSE).
+### Implementation checkpoint (2026-10-01, later)
+
+Built and tested against the hosted Supabase project: login, sign-up and recovery; reports with photos, AI suggestion (manual fallback when no key is set), duplicate warning with follow, and evidence; the full case lifecycle (assign, return, complete, feedback, dispute, close with a reason, reject, reopen, correct type, delay note, instruction); pickups; the admin dashboard, case list, place history with prevention reviews, map, CSV export and setup including people; supervisor and higher-authority queues; resident points, badges and opt-in leaderboard; and the awareness guide. Not built: simulated vehicle trips and their screens, performance flags, the setup audit page. The folder map above is complete; `features/` holds one folder per area.
+
+```bash
+npm run seed:demo        # sample cases, pickups and reviews (safe to repeat)
+npm run reset:demo       # clears case and pickup data of the two sample organisations first
+npm run test:unit        # Vitest
+npm run test:schema      # database rules offline (PGlite)
+npm run test:e2e         # Playwright, needs the app running and the sample logins
+```
+
+### Update 🆕 (2026-10-01): verified staff sign-up and live vehicles
+
+- Sign-up asks "Who are you?": Resident, Worker (waste collector or driver) or Administrator. Staff need a staff ID + work email from **Setup → Staff IDs**. Free demo IDs after `npm run seed:demo`: `CWA-ADM-002`, `CWA-DRV-002`, `CWA-COL-002` with `newadmin@`, `newdriver@`, `newcollector@citywarda.demo` (and `GRS-…` with `@greenresidency.demo`).
+- Drivers start a trip on `/worker` by scanning the vehicle QR (print it from Setup → QR codes) or typing its code; the phone shares its GPS while the page stays open. Residents (`/my`), workers and admins (`/admin/map`) see running vehicles.
+
+### SWMS bot 🆕 (2026-10-01)
+
+The animated bin opens a chat from the public home page (right side) and signed-in app pages (left side). Public help is grounded in user-facing workflow guidance. Signed-in residents can ask about their own recent reports and pickups; workers can ask about assigned ones. The bot reads through their session and cannot change records. Add the existing server-only `GEMINI_API_KEY` from `.env.example` to `.env.local` for model-written replies; without it, documented help and status summaries still work. `20261001001200_bot_runs.sql` enables quota-reserved model calls after it is applied. No key is currently configured locally, and live Gemini answers have not been verified.
+
+The launcher is a transparent animated mascot fixed at the bottom, with a small “Ask” label underneath. The question field stays at the bottom of the open chat.
+
+### Demo QR walkthrough 🆕 (2026-10-01)
+
+Admin Setup → QR codes includes a read-only demo area. Upload a PNG, JPEG or WebP QR image to preview the matching worker, waste collector, driver, bin/spot, disposal-site or vehicle process. The image is decoded in the browser and not stored. The page also supplies three downloadable role-demo QRs; scanning one with a phone opens the public `/demo/qr` walkthrough. Unknown and other-organisation codes are rejected. Demo scans never sign in a user or change app data; the printed operational QRs keep their existing checks. Disposal-site verification is documented but not yet implemented as an app action.
